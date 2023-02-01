@@ -1,338 +1,228 @@
-
--- // Aimbot
-uwuAimbot:Toggle({
-Name = "Enabled",
-Default = false,
-Pointer = "AimbotMain_Enabled",
-Callback = function(v)
-print(v)
-getgenv().DNS.Tracer.Enabled = v  
-    
-end
-})
-
-uwuAimbot:Toggle({
-Name = "ShowFov",
-Default = false,
-Pointer = "AimbotMain_Enabled",
-Callback = function(v)
-print(v)
-getgenv().DNS.FOV["Visible"] = v  
+getgenv().EU0001 = {
+    SilentAim = {
+        Key = "C",
+        Enabled = true,
+        Prediction = 0.119,
+        AimingType = "Closest Part", -- Closest Part, Default
+        AimPart = "HumanoidRootPart",
         
-end
-})
+        ChanceData = {UseChance = false, Chance = 100},
+        FOVData = {Radius = 80, Visibility = true, Filled = false},
 
-uwuMisc:Toggle({
-Name = "Shake",
-Default = false,
-Pointer = "Shake_Enabled",
-Callback = function(v)
-print(v)
-getgenv().DNS.Misc.Shake = v  
-            
-end
-})
+        AimingData = {CheckKnocked = true, CheckGrabbed = true,
+        CheckWalls = true},
 
-uwuMisc:Toggle({
-Name = "UnlockOnDeath",
-Default = false,
-Pointer = "UnlockOnDeath_Enabled",
-Callback = function(v)
-print(v)
-getgenv().DNS.Misc.UnlockedOnDeath = v  
-                
-end
-})
+    },
+    Tracing = {
+        Key = 'Q',
+        Enabled = true,
+        Prediction = 8,
+        AimPart = "HumanoidRootPart",
+        TracingOptions = {Strength = "Hard", AimingType = "Closest Part",  Smoothness = 0.11} 
+                            -- Hard, Soft
+    }
+}
 
-uwuSettings:Slider({Name = "Smoothness",
-Minimum = 0.001,
-Maximum = 1.5,
-Default = 0.014,
-Decimals = 0.001,
-Pointer = "AimbotMain_Smoothness",
-Callback = function(v)
-getgenv().DNS.Tracer.Smoothness = v
- 
-end  
-})
+local EU0001 = {functions = {}}
 
-uwuSettings:Slider({Name = "FOV Radius",
-Minimum = 0.01,
-Maximum = 100,
-Default = 15.5,
-Decimals = 0.01,
-Pointer = "AimbotMain_Radius",
-Callback = function(v)
-getgenv().DNS.FOV["Radius"] = v  
- 
-end  
-})
-
-uwuSettings:Slider({Name = "Shake Value",
-Minimum = 0.5,
-Maximum = 100,
-Default = 0.58,
-Decimals = 0.001,
-Pointer = "AimbotMain_Booty",
-Callback = function(v)
-getgenv().DNS.Misc.ShakeValue = v
-  
-end  
-})
-
-uwuSettings:Slider({Name = "Tracer Prediction",
-Minimum = 0.001,
-Maximum = 10,
-Default = 0.1,
-Decimals = 0.001,
-Pointer = "AimbotMain_Booty",
-Callback = function(v)
-getgenv().DNS.Tracer.Pred = v
-  
-end  
-})
-
-uwuSettings:Slider({Name = "Silent Prediction",
-Minimum = 0.10,
-Maximum = 0.195,
-Default = 0.135,
-Decimals = 0.001,
-Pointer = "AimbotMain_Booty",
-Callback = function(v)
-getgenv().DNS.Misc.ShakeValue = v
-  
-end  
-})
+local Vector2New, Cam, Mouse, client, find, Draw, Inset, players, RunService, UIS=
+    Vector2.new,
+    workspace.CurrentCamera,
+    game.Players.LocalPlayer:GetMouse(),
+    game.Players.LocalPlayer,
+    table.find,
+    Drawing.new,
+    game:GetService("GuiService"):GetGuiInset().Y,
+    game.Players, 
+    game.RunService,
+    game:GetService("UserInputService")
 
 
-Settings_Main:ConfigBox({})
-Settings_Main:ButtonHolder({Buttons = {{"Load", function() end}, {"Save", function() end}}})
-Settings_Main:Label({Name = "Unloading will fully unload\neverything, so save your\nconfig before unloading.", Middle = true})
-Settings_Main:Button({Name = "Unload", Callback = function() Window:Unload() end})
--- // Initialisation
-Window:Initialize()
+local mf, rnew = math.floor, Random.new
 
+local Targetting
+local lockedCamTo
 
-
---- the code shit
-
-local Players, Client, Mouse, RS, Camera =
-game:GetService("Players"),
-game:GetService("Players").LocalPlayer,
-game:GetService("Players").LocalPlayer:GetMouse(),
-game:GetService("RunService"),
-game.Workspace.CurrentCamera
-
-local Circle = Drawing.new("Circle")
-Circle.Color = Color3.new(1,1,1)
+local Circle = Draw("Circle")
 Circle.Thickness = 1
+Circle.Transparency = 0.7
+Circle.Color = Color3.new(1,1,1)
 
-local UpdateFOV = function ()
-if (not Circle) then
+EU0001.functions.update_FOVs = function ()
+    if not (Circle) then
+        return Circle
+    end
+    Circle.Radius =  getgenv().EU0001.SilentAim.FOVData.Radius * 3
+    Circle.Visible = getgenv().EU0001.SilentAim.FOVData.Visibility
+    Circle.Filled = getgenv().EU0001.SilentAim.FOVData.Filled
+    Circle.Position = Vector2New(Mouse.X, Mouse.Y + (Inset))
     return Circle
 end
-Circle.Visible = getgenv().DNS.FOV["Visible"]
-Circle.Radius = getgenv().DNS.FOV["Radius"] * 3
-Circle.Position = Vector2.new(Mouse.X, Mouse.Y + (game:GetService("GuiService"):GetGuiInset().Y))
-return Circle
-end
 
-RS.Heartbeat:Connect(UpdateFOV)
+EU0001.functions.onKeyPress = function(inputObject)
+    if inputObject.KeyCode == Enum.KeyCode[getgenv().EU0001.SilentAim.Key:upper()] then
+        getgenv().EU0001.SilentAim.Enabled = not getgenv().EU0001.SilentAim.Enabled
+    end
 
-ClosestPlrFromMouse = function()
-local Target, Closest = nil, 1/0
-
-for _ ,v in pairs(Players:GetPlayers()) do
-    if (v.Character and v ~= Client and v.Character:FindFirstChild("HumanoidRootPart")) then
-        local Position, OnScreen = Camera:WorldToScreenPoint(v.Character.HumanoidRootPart.Position)
-        local Distance = (Vector2.new(Position.X, Position.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
-
-        if (Circle.Radius > Distance and Distance < Closest and OnScreen) then
-            Closest = Distance
-            Target = v
+    if inputObject.KeyCode == Enum.KeyCode[getgenv().EU0001.Tracing.Key:upper()] then
+        getgenv().EU0001.Tracing.Enabled = not getgenv().EU0001.Tracing.Enabled
+        if getgenv().EU0001.Tracing.Enabled then
+            lockedCamTo = EU0001.functions.returnClosestPlayer(getgenv().EU0001.SilentAim.ChanceData.Chance)
         end
     end
 end
-return Target
-end
 
-local WTS = function (Object)
-local ObjectVector = Camera:WorldToScreenPoint(Object.Position)
-return Vector2.new(ObjectVector.X, ObjectVector.Y)
-end
-
-local IsOnScreen = function (Object)
-local IsOnScreen = Camera:WorldToScreenPoint(Object.Position)
-return IsOnScreen
-end
-
-local FilterObjs = function (Object)
-if string.find(Object.Name, "Gun") then
-    return
-end
-if table.find({"Part", "MeshPart", "BasePart"}, Object.ClassName) then
-    return true
-end
-end
-
-local GetClosestBodyPart = function (character)
-local ClosestDistance = 1/0
-local BodyPart = nil
-if (character and character:GetChildren()) then
-    for _,  x in next, character:GetChildren() do
-        if FilterObjs(x) and IsOnScreen(x) then
-            local Distance = (WTS(x) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
-            if (Circle.Radius > Distance and Distance < ClosestDistance) then
-                ClosestDistance = Distance
-                BodyPart = x
-            end
-        end
-    end
-end
-return BodyPart
-end
-
-local Prey
-
-task.spawn(function ()
-while task.wait() do
-    if Prey then
-        if getgenv().DNS.Silent.Enabled and getgenv().DNS.Silent.ClosestPart == true then
-            getgenv().DNS.Silent["Part"] = tostring(GetClosestBodyPart(Prey.Character))
-        end
-    end
-end
-end)
-
-local grmt = getrawmetatable(game)
-local backupindex = grmt.__index
-setreadonly(grmt, false)
-
-grmt.__index = newcclosure(function(self, v)
-if (getgenv().DNS.Silent.Enabled and Mouse and tostring(v) == "Hit") then
-
-    Prey = ClosestPlrFromMouse()
-
-    if Prey then
-        local endpoint = game.Players[tostring(Prey)].Character[getgenv().DNS.Silent["Part"]].CFrame + (
-            game.Players[tostring(Prey)].Character[getgenv().DNS.Silent["Part"]].Velocity * getgenv().DNS.Silent.Pred
-        )
-        return (tostring(v) == "Hit" and endpoint)
-    end
-end
-return backupindex(self, v)
-end)
-
-local CC = game.Workspace.CurrentCamera
-local Mouse = game.Players.LocalPlayer:GetMouse()
-local Plr
+UIS.InputBegan:Connect(EU0001.functions.onKeyPress)
 
 
-Mouse.KeyDown:Connect(function(Key)
-    local Keybind = getgenv().DNS.Tracer.Key:lower()
-    if (Key == Keybind) then
-        if getgenv().DNS.Tracer.Enabled == true then
-            IsTargetting = not IsTargetting
-            if IsTargetting then
-                Plr = GetClosest()
-            else
-                if Plr ~= nil then
-                    Plr = nil
-                end
-            end
-        end
-    end
-end)
-
-function GetClosest()
-    local closestPlayer
-    local shortestDistance = math.huge
-    for i, v in pairs(game.Players:GetPlayers()) do
-        pcall(function()
-
-            if v ~= game.Players.LocalPlayer and v.Character and
-                v.Character:FindFirstChild("Humanoid") then
-                local pos = CC:WorldToViewportPoint(v.Character.PrimaryPart.Position)
-                local magnitude =
-                (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).magnitude
-                if (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).magnitude < shortestDistance then
-                    closestPlayer = v
-                    shortestDistance = magnitude
-                end
-            end
-        end)
-    end
-    return closestPlayer
-end
-
-local function IsOnScreen(Object)
-    local IsOnScreen = game.Workspace.CurrentCamera:WorldToScreenPoint(Object.Position)
-    return IsOnScreen
-end
-
-local function Filter(Object)
-    if string.find(Object.Name, "Gun") then
-        return
-    end
-    if Object:IsA("Part") or Object:IsA("MeshPart") then
+EU0001.functions.wallCheck = function(direction, ignoreList)
+    if not getgenv().EU0001.SilentAim.AimingData.CheckWalls then
         return true
     end
+
+    local ray = Ray.new(Cam.CFrame.p, direction - Cam.CFrame.p)
+    local part, _, _ = game:GetService("Workspace"):FindPartOnRayWithIgnoreList(ray, ignoreList)
+
+    return not part
 end
 
-local function WTSPos(Position)
-    local ObjectVector = game.Workspace.CurrentCamera:WorldToScreenPoint(Position)
-    return Vector2.new(ObjectVector.X, ObjectVector.Y)
+EU0001.functions.pointDistance = function(part)
+    local OnScreen = Cam.WorldToScreenPoint(Cam, part.Position)
+    if OnScreen then
+        return (Vector2New(OnScreen.X, OnScreen.Y) - Vector2New(Mouse.X, Mouse.Y)).Magnitude
+    end
 end
 
-local function WTS(Object)
-    local ObjectVector = game.Workspace.CurrentCamera:WorldToScreenPoint(Object.Position)
-    return Vector2.new(ObjectVector.X, ObjectVector.Y)
-end
+EU0001.functions.returnClosestPart = function(Character)
+    local data = {
+        dist = math.huge,
+        part = nil,
+        filteredparts = {},
+        classes = {"Part", "BasePart", "MeshPart"}
+    }
 
-function GetNearestPartToCursorOnCharacter(character)
-    local ClosestDistance = math.huge
-    local BodyPart = nil
-
-    if (character and character:GetChildren()) then
-        for k,  x in next, character:GetChildren() do
-            if Filter(x) and IsOnScreen(x) then
-                local Distance = (WTS(x) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
-    
-                if Distance < ClosestDistance then
-                    ClosestDistance = Distance
-                    BodyPart = x
+    if not (Character and Character:IsA("Model")) then
+        return data.part
+    end
+    local children = Character:GetChildren()
+    for _, child in pairs(children) do
+        if table.find(data.classes, child.ClassName) then
+            table.insert(data.filteredparts, child)
+            for _, part in pairs(data.filteredparts) do
+                local dist = EU0001.functions.pointDistance(part)
+                if Circle.Radius > dist and dist < data.dist then
+                    data.part = part
+                    data.dist = dist
                 end
             end
         end
     end
-
-    return BodyPart
+    return data.part
 end
 
-game.RunService.Heartbeat:Connect(function()
-    if getgenv().DNS.Tracer.Enabled == true and Plr and Plr.Character ~= nil then
-        if getgenv().DNS.Misc.UnlockedOnDeath then
-            if Plr.Character.BodyEffects["K.O"].Value then Plr = nil end
+EU0001.functions.returnClosestPlayer = function (amount)
+    local data = {
+        dist = 1/0,
+        player = nil
+    }
+
+    amount = amount or nil
+
+    for _, player in pairs(players:GetPlayers()) do
+        if (player.Character and player ~= client) then
+            local dist = EU0001.functions.pointDistance(player.Character.HumanoidRootPart)
+            if Circle.Radius > dist and dist < data.dist and 
+            EU0001.functions.wallCheck(player.Character.Head.Position,{client, player.Character}) then
+                data.dist = dist
+                data.player = player
+            end
         end
-        if getgenv().DNS.Misc.Shake then
-            local Main = CFrame.new(Camera.CFrame.p,Plr.Character[getgenv().DNS.Tracer.Part].Position + Plr.Character[getgenv().DNS.Tracer.Part].Velocity * getgenv().DNS.Tracer.Pred +
-            Vector3.new(
-                math.random(-getgenv().DNS.Misc.ShakeValue, getgenv().DNS.Misc.ShakeValue),
-                math.random(-getgenv().DNS.Misc.ShakeValue, getgenv().DNS.Misc.ShakeValue),
-                math.random(-getgenv().DNS.Misc.ShakeValue, getgenv().DNS.Misc.ShakeValue)
-            ) * 0.1)
-            Camera.CFrame = Camera.CFrame:Lerp(Main, getgenv().DNS.Tracer.Smoothness, Enum.EasingStyle.Elastic, Enum.EasingDirection.InOut, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-        else
-            local Main = CFrame.new(Camera.CFrame.p,Plr.Character[getgenv().DNS.Tracer.Part].Position + Plr.Character[getgenv().DNS.Tracer.Part].Velocity * getgenv().DNS.Tracer.Pred)
-            Camera.CFrame = Camera.CFrame:Lerp(Main, getgenv().DNS.Tracer.Smoothness, Enum.EasingStyle.Elastic, Enum.EasingDirection.InOut, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+    end
+    local calc = mf(rnew().NextNumber(rnew(), 0, 1) * 100) / 100
+    local use = getgenv().EU0001.SilentAim.ChanceData.UseChance
+    if use and calc <= mf(amount) / 100 then
+        return calc and data.player
+    else
+        return data.player
+    end
+end
+
+EU0001.functions.setAimingType = function (player, type)
+    local previousSilentAimPart = getgenv().EU0001.SilentAim.AimPart
+    local previousTracingPart = getgenv().EU0001.Tracing.AimPart
+    if type == "Closest Part" then
+        getgenv().EU0001.SilentAim.AimPart = tostring(EU0001.functions.returnClosestPart(player.Character))
+        getgenv().EU0001.Tracing.AimPart = tostring(EU0001.functions.returnClosestPart(player.Character))
+    elseif type == "Closest Point" then
+        EU0001.functions.returnClosestPoint()
+    elseif type == "Default" then
+        getgenv().EU0001.SilentAim.AimPart = previousSilentAimPart
+        getgenv().EU0001.Tracing.AimPart = previousTracingPart
+    else
+        getgenv().EU0001.SilentAim.AimPart = previousSilentAimPart
+        getgenv().EU0001.Tracing.AimPart = previousTracingPart
+    end
+end
+
+EU0001.functions.aimingCheck = function (player)
+    if getgenv().EU0001.SilentAim.AimingData.CheckKnocked == true and player and player.Character then
+        if player.Character.BodyEffects["K.O"].Value then
+            return true
         end
+    end
+    if getgenv().EU0001.SilentAim.AimingData.CheckGrabbed == true and player and player.Character then
+        if player.Character:FindFirstChild("GRABBING_CONSTRAINT") then
+            return true
+        end
+    end
+    return false
+end
+
+
+local lastRender = 0
+local interpolation = 0.01
+
+RunService.RenderStepped:Connect(function(delta)
+    local valueTypes = 1.375
+    lastRender = lastRender + delta
+    while lastRender > interpolation do
+        lastRender = lastRender - interpolation
+    end
+    if getgenv().EU0001.Tracing.Enabled and lockedCamTo ~= nil and getgenv().EU0001.Tracing.TracingOptions.Strength == "Hard" then
+        local Vel =  lockedCamTo.Character[getgenv().EU0001.Tracing.AimPart].Velocity / (getgenv().EU0001.Tracing.Prediction * valueTypes)
+        local Main = CFrame.new(Cam.CFrame.p, lockedCamTo.Character[getgenv().EU0001.Tracing.AimPart].Position + (Vel))
+        Cam.CFrame = Cam.CFrame:Lerp(Main ,getgenv().EU0001.Tracing.TracingOptions.Smoothness , Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+        EU0001.functions.setAimingType(lockedCamTo, getgenv().EU0001.Tracing.TracingOptions.AimingType)
+    elseif getgenv().EU0001.Tracing.Enabled and lockedCamTo ~= nil and getgenv().EU0001.Tracing.TracingOptions.Strength == "Soft" then
+        local Vel =  lockedCamTo.Character[getgenv().EU0001.Tracing.AimPart].Velocity / (getgenv().EU0001.Tracing.Prediction / valueTypes)
+        local Main = CFrame.new(Cam.CFrame.p, lockedCamTo.Character[getgenv().EU0001.Tracing.AimPart].Position + (Vel))
+        Cam.CFrame = Cam.CFrame:Lerp(Main ,getgenv().EU0001.Tracing.TracingOptions.Smoothness , Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+        EU0001.functions.setAimingType(lockedCamTo, getgenv().EU0001.Tracing.TracingOptions.AimingType)
+    else
+
     end
 end)
 
-task.spawn(function()
+task.spawn(function ()
     while task.wait() do
-        if getgenv().DNS.Tracer.Enabled and Plr ~= nil and (Plr.Character) then
-            getgenv().DNS.Tracer.Part = tostring(GetNearestPartToCursorOnCharacter(Plr.Character))
+        if Targetting then
+            EU0001.functions.setAimingType(Targetting, getgenv().EU0001.SilentAim.AimingType)
+        end
+        EU0001.functions.update_FOVs()
+    end
+end)
+
+
+local __index
+__index = hookmetamethod(game,"__index", function(Obj, Property)
+    if Obj:IsA("Mouse") and Property == "Hit" then
+        Targetting = EU0001.functions.returnClosestPlayer(getgenv().EU0001.SilentAim.ChanceData.Chance)
+        if Targetting ~= nil and getgenv().EU0001.SilentAim.Enabled and not EU0001.functions.aimingCheck(Targetting) then
+            local currentvelocity = Targetting.Character[getgenv().EU0001.SilentAim.AimPart].Velocity
+            local currentposition = Targetting.Character[getgenv().EU0001.SilentAim.AimPart].CFrame
+
+            return currentposition + (currentvelocity * getgenv().EU0001.SilentAim.Prediction)
         end
     end
+    return __index(Obj, Property)
 end)
