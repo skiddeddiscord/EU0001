@@ -1,28 +1,3 @@
-getgenv().EU0001 = {
-    SilentAim = {
-        Key = "C",
-        Enabled = true,
-        Prediction = 0.119,
-        AimingType = "Closest Part", -- Closest Part, Default
-        AimPart = "HumanoidRootPart",
-        
-        ChanceData = {UseChance = false, Chance = 100},
-        FOVData = {Radius = 80, Visibility = true, Filled = false},
-
-        AimingData = {CheckKnocked = true, CheckGrabbed = true,
-        CheckWalls = true},
-
-    },
-    Tracing = {
-        Key = 'Q',
-        Enabled = true,
-        Prediction = 8,
-        AimPart = "HumanoidRootPart",
-        TracingOptions = {Strength = "Hard", AimingType = "Closest Part",  Smoothness = 0.11} 
-                            -- Hard, Soft
-    }
-}
-
 local EU0001 = {functions = {}}
 
 local Vector2New, Cam, Mouse, client, find, Draw, Inset, players, RunService, UIS=
